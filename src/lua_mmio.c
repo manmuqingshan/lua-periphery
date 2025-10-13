@@ -26,10 +26,12 @@ mmio = MMIO(address <number>, size <number>)
 mmio = MMIO{address=<number>, size=<number>, path="/dev/mem"}
 
 -- Methods
+mmio:read64(offset <number>) --> <number|string>
 mmio:read32(offset <number>) --> <number>
 mmio:read16(offset <number>) --> <number>
 mmio:read8(offset <number>) --> <number>
 mmio:read(offset <number>, length <number>) --> <table>
+mmio:write64(offset <number>, value <number|string>)
 mmio:write32(offset <number>, value <number>)
 mmio:write16(offset <number>, value <number>)
 mmio:write8(offset <number>, value <number>)
@@ -151,6 +153,31 @@ static int lua_mmio_new(lua_State *L) {
     return 1;
 }
 
+static int lua_mmio_read64(lua_State *L) {
+    mmio_t *mmio;
+    uint64_t value;
+    uintptr_t offset;
+    int ret;
+
+    mmio = *((mmio_t **)luaL_checkudata(L, 1, "periphery.MMIO"));
+    lua_mmio_checktype(L, 2, LUA_TNUMBER);
+
+    offset = lua_tolargeinteger(L, 2);
+
+    if ((ret = mmio_read64(mmio, offset, &value)) < 0)
+        return lua_mmio_error(L, ret, mmio_errno(mmio), "Error: %s", mmio_errmsg(mmio));
+
+    if (value > LUA_MAXINTEGER) {
+        char buf[24];
+        snprintf(buf, sizeof(buf), "0x%lux", value);
+        lua_pushstring(L, buf);
+    } else {
+        lua_pushlargeinteger(L, value);
+    }
+
+    return 1;
+}
+
 static int lua_mmio_read32(lua_State *L) {
     mmio_t *mmio;
     uint32_t value;
@@ -206,6 +233,35 @@ static int lua_mmio_read8(lua_State *L) {
     lua_pushlargeinteger(L, value);
 
     return 1;
+}
+
+static int lua_mmio_write64(lua_State *L) {
+    mmio_t *mmio;
+    uint64_t value;
+    uintptr_t offset;
+    int ret;
+
+    mmio = *((mmio_t **)luaL_checkudata(L, 1, "periphery.MMIO"));
+    lua_mmio_checktype(L, 2, LUA_TNUMBER);
+
+    offset = lua_tolargeinteger(L, 2);
+
+    if (lua_type(L, 3) == LUA_TNUMBER) {
+        value = lua_tolargeinteger(L, 3);
+    } else if (lua_type(L, 3) == LUA_TSTRING) {
+        const char *str = lua_tostring(L, 3);
+        errno = 0;
+        value = strtoull(str, NULL, 0);
+        if (errno != 0)
+            return lua_mmio_error(L, MMIO_ERROR_ARG, errno, "Error: invalid value: %s", strerror(errno));
+    } else {
+        return lua_mmio_error(L, MMIO_ERROR_ARG, 0, "Error: invalid argument #3 (number or string expected, got %s)", lua_typename(L, lua_type(L, 3)));
+    }
+
+    if ((ret = mmio_write64(mmio, offset, value)) < 0)
+        return lua_mmio_error(L, ret, mmio_errno(mmio), "Error: %s", mmio_errmsg(mmio));
+
+    return 0;
 }
 
 static int lua_mmio_write32(lua_State *L) {
@@ -430,10 +486,12 @@ static int lua_mmio_newindex(lua_State *L) {
 
 static const struct luaL_Reg periphery_mmio_m[] = {
     {"close", lua_mmio_close},
+    {"read64", lua_mmio_read64},
     {"read32", lua_mmio_read32},
     {"read16", lua_mmio_read16},
     {"read8", lua_mmio_read8},
     {"read", lua_mmio_read},
+    {"write64", lua_mmio_write64},
     {"write32", lua_mmio_write32},
     {"write16", lua_mmio_write16},
     {"write8", lua_mmio_write8},

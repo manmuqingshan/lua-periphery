@@ -13,10 +13,12 @@ mmio = MMIO(address <number>, size <number>)
 mmio = MMIO{address=<number>, size=<number>, path="/dev/mem"}
 
 -- Methods
+mmio:read64(offset <number>) --> <number | string>
 mmio:read32(offset <number>) --> <number>
 mmio:read16(offset <number>) --> <number>
 mmio:read8(offset <number>) --> <number>
 mmio:read(offset <number>, length <number>) --> <table>
+mmio:write64(offset <number>, value <number | string>)
 mmio:write32(offset <number>, value <number>)
 mmio:write16(offset <number>, value <number>)
 mmio:write8(offset <number>, value <number>)
@@ -47,11 +49,12 @@ Returns a new MMIO object on success. Raises an [MMIO error](#errors) on failure
 --------------------------------------------------------------------------------
 
 ``` lua
+mmio:read64(offset <number>) --> <number | string>
 mmio:read32(offset <number>) --> <number>
 mmio:read16(offset <number>) --> <number>
 mmio:read8(offset <number>) --> <number>
 ```
-Read 32-bits, 16-bits, or 8-bits, respectively, from the mapped physical memory, starting at the specified byte offset, relative to the base physical address the MMIO object was opened with.
+Read 64-bits, 32-bits, 16-bits, or 8-bits, respectively, from the mapped physical memory, starting at the specified byte offset, relative to the base physical address the MMIO object was opened with. `read64()` returns a hexadecimal string if the 64-bit value read is out of range of Lua's number type.
 
 Returns the read unsigned integer on success. Raises an [MMIO error](#errors) on failure.
 
@@ -73,11 +76,12 @@ Returns the read bytes in a table array. Raises an [MMIO error](#errors) on fail
 --------------------------------------------------------------------------------
 
 ``` lua
+mmio:write64(offset <number>, value <number | string>)
 mmio:write32(offset <number>, value <number>)
 mmio:write16(offset <number>, value <number>)
 mmio:write8(offset <number>, value <number>)
 ```
-Write 32-bits, 16-bits, or 8-bits, respectively, to mapped physical memory, starting at the specified byte offset, relative to the base physical address the MMIO object was opened with.
+Write 64-bits, 32-bits, 16-bits, or 8-bits, respectively, to mapped physical memory, starting at the specified byte offset, relative to the base physical address the MMIO object was opened with. `write64()` accepts `value` as either a number or a string with a base prefix.
 
 Raises an [MMIO error](#errors) on failure.
 
