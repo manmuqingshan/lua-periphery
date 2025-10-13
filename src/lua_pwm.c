@@ -100,16 +100,16 @@ static int lua_pwm_open(lua_State *L) {
         if (!lua_isnumber(L, -1))
             return lua_pwm_error(L, PWM_ERROR_ARG, 0, "Error: invalid type on table argument 'channel', should be number");
 
-        chip = lua_tounsigned(L, -2);
-        channel = lua_tounsigned(L, -1);
+        chip = lua_tointeger(L, -2);
+        channel = lua_tointeger(L, -1);
 
     /* Arguments passed normally */
     } else {
         lua_pwm_checktype(L, 2, LUA_TNUMBER);
         lua_pwm_checktype(L, 3, LUA_TNUMBER);
 
-        chip = lua_tounsigned(L, 2);
-        channel = lua_tounsigned(L, 3);
+        chip = lua_tointeger(L, 2);
+        channel = lua_tointeger(L, 3);
     }
 
     if ((ret = pwm_open(pwm, chip, channel)) < 0)
@@ -219,10 +219,10 @@ static int lua_pwm_index(lua_State *L) {
     pwm = *((pwm_t **)luaL_checkudata(L, 1, "periphery.PWM"));
 
     if (strcmp(field, "chip") == 0) {
-        lua_pushunsigned(L, pwm_chip(pwm));
+        lua_pushinteger(L, pwm_chip(pwm));
         return 1;
     } else if (strcmp(field, "channel") == 0) {
-        lua_pushunsigned(L, pwm_channel(pwm));
+        lua_pushinteger(L, pwm_channel(pwm));
         return 1;
     } else if (strcmp(field, "enabled") == 0) {
         bool enabled;
@@ -240,7 +240,7 @@ static int lua_pwm_index(lua_State *L) {
         if ((ret = pwm_get_period_ns(pwm, &period_ns)) < 0)
             return lua_pwm_error(L, ret, pwm_errno(pwm), "Error: %s", pwm_errmsg(pwm));
 
-        lua_pushunsigned(L, period_ns);
+        lua_pushlargeinteger(L, period_ns);
         return 1;
     } else if (strcmp(field, "duty_cycle_ns") == 0) {
         uint64_t duty_cycle_ns;
@@ -249,7 +249,7 @@ static int lua_pwm_index(lua_State *L) {
         if ((ret = pwm_get_duty_cycle_ns(pwm, &duty_cycle_ns)) < 0)
             return lua_pwm_error(L, ret, pwm_errno(pwm), "Error: %s", pwm_errmsg(pwm));
 
-        lua_pushunsigned(L, duty_cycle_ns);
+        lua_pushlargeinteger(L, duty_cycle_ns);
         return 1;
     } else if (strcmp(field, "period") == 0) {
         double period;
@@ -327,7 +327,7 @@ static int lua_pwm_newindex(lua_State *L) {
         int ret;
 
         lua_pwm_checktype(L, 3, LUA_TNUMBER);
-        period_ns = lua_tounsigned(L, 3);
+        period_ns = lua_tolargeinteger(L, 3);
 
         if ((ret = pwm_set_period_ns(pwm, period_ns)) < 0)
             return lua_pwm_error(L, ret, pwm_errno(pwm), "Error: %s", pwm_errmsg(pwm));
@@ -338,7 +338,7 @@ static int lua_pwm_newindex(lua_State *L) {
         int ret;
 
         lua_pwm_checktype(L, 3, LUA_TNUMBER);
-        duty_cycle_ns = lua_tounsigned(L, 3);
+        duty_cycle_ns = lua_tolargeinteger(L, 3);
 
         if ((ret = pwm_set_duty_cycle_ns(pwm, duty_cycle_ns)) < 0)
             return lua_pwm_error(L, ret, pwm_errno(pwm), "Error: %s", pwm_errmsg(pwm));

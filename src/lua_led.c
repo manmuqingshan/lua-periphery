@@ -154,7 +154,7 @@ static int lua_led_write(lua_State *L) {
         if ((ret = led_write(led, value)) < 0)
             return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
     } else if (lua_isnumber(L, 2)) {
-        unsigned int value = lua_tounsigned(L, 2);
+        unsigned int value = lua_tolargeinteger(L, 2);
 
         if ((ret = led_set_brightness(led, value)) < 0)
             return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
@@ -235,7 +235,7 @@ static int lua_led_index(lua_State *L) {
         if ((ret = led_get_brightness(led, &brightness)) < 0)
             return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
 
-        lua_pushunsigned(L, brightness);
+        lua_pushlargeinteger(L, brightness);
         return 1;
     } else if (strcmp(field, "max_brightness") == 0) {
         unsigned int max_brightness;
@@ -244,7 +244,7 @@ static int lua_led_index(lua_State *L) {
         if ((ret = led_get_max_brightness(led, &max_brightness)) < 0)
             return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
 
-        lua_pushunsigned(L, max_brightness);
+        lua_pushlargeinteger(L, max_brightness);
         return 1;
     }
 
@@ -271,7 +271,7 @@ static int lua_led_newindex(lua_State *L) {
         int ret;
 
         lua_led_checktype(L, 3, LUA_TNUMBER);
-        brightness = lua_tounsigned(L, 3);
+        brightness = lua_tolargeinteger(L, 3);
 
         if ((ret = led_set_brightness(led, brightness)) < 0)
             return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));

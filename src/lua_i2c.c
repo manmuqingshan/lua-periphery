@@ -161,7 +161,7 @@ static int lua_i2c_transfer(lua_State *L) {
     lua_i2c_checktype(L, 2, LUA_TNUMBER);
     lua_i2c_checktype(L, 3, LUA_TTABLE);
 
-    i2c_addr = lua_tounsigned(L, 2);
+    i2c_addr = lua_tointeger(L, 2);
     num_msgs = luaL_len(L, 3);
 
     if ((i2c_msgs = malloc(num_msgs * sizeof(struct i2c_msg))) == NULL)
@@ -173,7 +173,7 @@ static int lua_i2c_transfer(lua_State *L) {
     for (i = 0; i < num_msgs; i++) {
         unsigned int msg_len, msg_flags;
 
-        lua_pushunsigned(L, i+1);
+        lua_pushinteger(L, i+1);
         lua_gettable(L, -2);
         /* Check message table is a table with length > 0 */
         if (!lua_istable(L, -1) || luaL_len(L, -1) == 0) {
@@ -192,7 +192,7 @@ static int lua_i2c_transfer(lua_State *L) {
             _free_i2c_msgs(i2c_msgs, num_msgs);
             return lua_i2c_error(L, I2C_ERROR_ARG, 0, "Error: invalid message flags in message index %d of transfer table.", i+1);
         } else {
-            msg_flags = lua_tounsigned(L, -1);
+            msg_flags = lua_tolargeinteger(L, -1);
         }
         /* Pop message flags */
         lua_pop(L, 1);
@@ -210,7 +210,7 @@ static int lua_i2c_transfer(lua_State *L) {
 
             /* Extract message data from table */
             for (j = 0; j < msg_len; j++) {
-                lua_pushunsigned(L, j+1);
+                lua_pushinteger(L, j+1);
                 lua_gettable(L, -2);
                 /* Check message data is an integer */
                 if (!lua_isnumber(L, -1)) {
@@ -218,7 +218,7 @@ static int lua_i2c_transfer(lua_State *L) {
                     return lua_i2c_error(L, I2C_ERROR_ARG, 0, "Error: invalid message data %d in message index %d of transfer table");
                 }
 
-                i2c_msgs[i].buf[j] = lua_tounsigned(L, -1);
+                i2c_msgs[i].buf[j] = lua_tointeger(L, -1);
 
                 /* Pop message data */
                 lua_pop(L, 1);
@@ -239,13 +239,13 @@ static int lua_i2c_transfer(lua_State *L) {
     for (i = 0; i < num_msgs; i++) {
         if (i2c_msgs[i].flags & I2C_M_RD) {
             /* Get message table at this index */
-            lua_pushunsigned(L, i+1);
+            lua_pushinteger(L, i+1);
             lua_gettable(L, -2);
 
             /* For each byte of the read message, update the message table */
             for (j = 0; j < i2c_msgs[i].len; j++) {
-                lua_pushunsigned(L, j+1);
-                lua_pushunsigned(L, i2c_msgs[i].buf[j]);
+                lua_pushinteger(L, j+1);
+                lua_pushinteger(L, i2c_msgs[i].buf[j]);
                 lua_settable(L, -3);
             }
 
@@ -369,23 +369,23 @@ LUALIB_API int luaopen_periphery_i2c(lua_State *L) {
 
     /* Copy useful message flags from <linux/i2c.h> */
     /* The constants below are available from kernel version 3.2 onwards */
-    lua_pushunsigned(L, I2C_M_TEN);
+    lua_pushinteger(L, I2C_M_TEN);
     lua_setfield(L, -2, "I2C_M_TEN");
-    lua_pushunsigned(L, I2C_M_RD);
+    lua_pushinteger(L, I2C_M_RD);
     lua_setfield(L, -2, "I2C_M_RD");
-    lua_pushunsigned(L, I2C_M_NOSTART);
+    lua_pushinteger(L, I2C_M_NOSTART);
     lua_setfield(L, -2, "I2C_M_NOSTART");
-    lua_pushunsigned(L, I2C_M_REV_DIR_ADDR);
+    lua_pushinteger(L, I2C_M_REV_DIR_ADDR);
     lua_setfield(L, -2, "I2C_M_REV_DIR_ADDR");
-    lua_pushunsigned(L, I2C_M_IGNORE_NAK);
+    lua_pushinteger(L, I2C_M_IGNORE_NAK);
     lua_setfield(L, -2, "I2C_M_IGNORE_NAK");
-    lua_pushunsigned(L, I2C_M_NO_RD_ACK);
+    lua_pushinteger(L, I2C_M_NO_RD_ACK);
     lua_setfield(L, -2, "I2C_M_NO_RD_ACK");
-    lua_pushunsigned(L, I2C_M_RECV_LEN);
+    lua_pushinteger(L, I2C_M_RECV_LEN);
     lua_setfield(L, -2, "I2C_M_RECV_LEN");
     /* I2C_M_STOP flag was added in kernel version 3.6 */
     #ifdef I2C_M_STOP
-    lua_pushunsigned(L, I2C_M_STOP);
+    lua_pushinteger(L, I2C_M_STOP);
     lua_setfield(L, -2, "I2C_M_STOP");
     #endif
 

@@ -130,7 +130,7 @@ static int lua_gpio_open(lua_State *L) {
 
         lua_getfield(L, 2, "line");
         if (lua_type(L, -1) == LUA_TNUMBER)
-            line = lua_tounsigned(L, -1);
+            line = lua_tointeger(L, -1);
         else if (path && lua_type(L, -1) == LUA_TSTRING)
             line_name = lua_tostring(L, -1);
         else
@@ -210,7 +210,7 @@ static int lua_gpio_open(lua_State *L) {
         path = lua_tostring(L, 2);
 
         if (lua_type(L, 3) == LUA_TNUMBER)
-            line = lua_tounsigned(L, 3);
+            line = lua_tointeger(L, 3);
         else if (lua_type(L, 3) == LUA_TSTRING)
             line_name = lua_tostring(L, 3);
         else
@@ -222,7 +222,7 @@ static int lua_gpio_open(lua_State *L) {
         /* Arguments paseed on stack: line(number), direction (string) */
 
         lua_gpio_checktype(L, 2, LUA_TNUMBER);
-        line = lua_tounsigned(L, 2);
+        line = lua_tointeger(L, 2);
 
         lua_gpio_checktype(L, 3, LUA_TSTRING);
         str_direction = lua_tostring(L, 3);
@@ -373,7 +373,7 @@ static int lua_gpio_read_event(lua_State *L) {
     }
     lua_setfield(L, -2, "edge");
     /* .timestamp number */
-    lua_pushunsigned(L, timestamp);
+    lua_pushlargeinteger(L, timestamp);
     lua_setfield(L, -2, "timestamp");
 
     return 1;
@@ -391,7 +391,7 @@ static int lua_gpio_poll_multiple(lua_State *L) {
     /* Extract the gpio_t pointers from the input table of userdatas */
     for (unsigned int i = 0; i < count; i++) {
         /* Get the userdata from the input table */
-        lua_pushunsigned(L, i+1);
+        lua_pushinteger(L, i+1);
         lua_gettable(L, 1);
         gpios[i] = *((gpio_t **)luaL_checkudata(L, -1, "periphery.GPIO"));
         /* Pop the userdata */
@@ -418,10 +418,10 @@ static int lua_gpio_poll_multiple(lua_State *L) {
     for (unsigned int i = 0, j = 1; ret && i < count; i++) {
         if (gpios_ready[i]) {
             /* Push the index into the output table */
-            lua_pushunsigned(L, j++);
+            lua_pushinteger(L, j++);
 
             /* Get the userdata from the input table */
-            lua_pushunsigned(L, i+1);
+            lua_pushinteger(L, i+1);
             lua_gettable(L, 1);
 
             /* Set the user data in the output table */
@@ -487,7 +487,7 @@ static int lua_gpio_index(lua_State *L) {
     gpio = *((gpio_t **)luaL_checkudata(L, 1, "periphery.GPIO"));
 
     if (strcmp(field, "line") == 0) {
-        lua_pushunsigned(L, gpio_line(gpio));
+        lua_pushinteger(L, gpio_line(gpio));
         return 1;
     } else if (strcmp(field, "fd") == 0) {
         lua_pushinteger(L, gpio_fd(gpio));

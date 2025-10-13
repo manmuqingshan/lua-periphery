@@ -115,8 +115,8 @@ static int lua_spi_open(lua_State *L) {
             return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid type on table argument 'max_speed', should be number");
 
         device = lua_tostring(L, -3);
-        mode = lua_tounsigned(L, -2);
-        max_speed = lua_tounsigned(L, -1);
+        mode = lua_tointeger(L, -2);
+        max_speed = lua_tolargeinteger(L, -1);
 
         /* Optional bit_order */
         lua_getfield(L, 2, "bit_order");
@@ -136,14 +136,14 @@ static int lua_spi_open(lua_State *L) {
         /* Optional bits_per_word */
         lua_getfield(L, 2, "bits_per_word");
         if (lua_isnumber(L, -1))
-            bits_per_word = lua_tounsigned(L, -1);
+            bits_per_word = lua_tointeger(L, -1);
         else if (!lua_isnil(L, -1))
             return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid type on table argument 'bits_per_word', should be number");
 
         /* Optional extra_flags */
         lua_getfield(L, 2, "extra_flags");
         if (lua_isnumber(L, -1))
-            extra_flags = lua_tounsigned(L, -1);
+            extra_flags = lua_tolargeinteger(L, -1);
         else if (!lua_isnil(L, -1))
             return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid type on table argument 'extra_flags', should be number");
 
@@ -154,8 +154,8 @@ static int lua_spi_open(lua_State *L) {
         lua_spi_checktype(L, 4, LUA_TNUMBER);
 
         device = lua_tostring(L, 2);
-        mode = lua_tounsigned(L, 3);
-        max_speed = lua_tounsigned(L, 4);
+        mode = lua_tointeger(L, 3);
+        max_speed = lua_tolargeinteger(L, 4);
     }
 
     if ((ret = spi_open_advanced2(spi, device, mode, max_speed, bit_order, bits_per_word, extra_flags)) < 0)
@@ -202,14 +202,14 @@ static int lua_spi_transfer(lua_State *L) {
 
     /* Convert byte table to byte buffer */
     for (i = 0; i < len; i++) {
-        lua_pushunsigned(L, i+1);
+        lua_pushinteger(L, i+1);
         lua_gettable(L, -2);
         if (!lua_isnumber(L, -1)) {
             free(buf);
             return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid element index %d in bytes table.", i+1);
         }
 
-        buf[i] = lua_tounsigned(L, -1);
+        buf[i] = lua_tointeger(L, -1);
         lua_pop(L, 1);
     }
 
@@ -220,8 +220,8 @@ static int lua_spi_transfer(lua_State *L) {
 
     /* Convert byte buffer back to bytes table */
     for (i = 0; i < len; i++) {
-        lua_pushunsigned(L, i+1);
-        lua_pushunsigned(L, buf[i]);
+        lua_pushinteger(L, i+1);
+        lua_pushinteger(L, buf[i]);
         lua_settable(L, -3);
     }
 
@@ -294,7 +294,7 @@ static int lua_spi_index(lua_State *L) {
         if ((ret = spi_get_mode(spi, &mode)) < 0)
             return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
 
-        lua_pushunsigned(L, mode);
+        lua_pushinteger(L, mode);
         return 1;
     } else if (strcmp(field, "max_speed") == 0) {
         uint32_t speed;
@@ -303,7 +303,7 @@ static int lua_spi_index(lua_State *L) {
         if ((ret = spi_get_max_speed(spi, &speed)) < 0)
             return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
 
-        lua_pushunsigned(L, speed);
+        lua_pushlargeinteger(L, speed);
         return 1;
     } else if (strcmp(field, "bit_order") == 0) {
         spi_bit_order_t bit_order;
@@ -325,7 +325,7 @@ static int lua_spi_index(lua_State *L) {
         if ((ret = spi_get_bits_per_word(spi, &bits_per_word)) < 0)
             return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
 
-        lua_pushunsigned(L, bits_per_word);
+        lua_pushinteger(L, bits_per_word);
         return 1;
     } else if (strcmp(field, "extra_flags") == 0) {
         uint32_t extra_flags32;
@@ -339,11 +339,11 @@ static int lua_spi_index(lua_State *L) {
             if ((ret = spi_get_extra_flags(spi, &extra_flags8)) < 0)
                 return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
 
-            lua_pushunsigned(L, extra_flags8);
+            lua_pushinteger(L, extra_flags8);
             return 1;
         }
 
-        lua_pushunsigned(L, extra_flags32);
+        lua_pushlargeinteger(L, extra_flags32);
         return 1;
     }
 
@@ -368,7 +368,7 @@ static int lua_spi_newindex(lua_State *L) {
         int ret;
 
         lua_spi_checktype(L, 3, LUA_TNUMBER);
-        mode = lua_tounsigned(L, 3);
+        mode = lua_tointeger(L, 3);
 
         if ((ret = spi_set_mode(spi, mode)) < 0)
             return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
@@ -379,7 +379,7 @@ static int lua_spi_newindex(lua_State *L) {
         int ret;
 
         lua_spi_checktype(L, 3, LUA_TNUMBER);
-        max_speed = lua_tounsigned(L, 3);
+        max_speed = lua_tolargeinteger(L, 3);
 
         if ((ret = spi_set_max_speed(spi, max_speed)) < 0)
             return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
@@ -409,7 +409,7 @@ static int lua_spi_newindex(lua_State *L) {
         int ret;
 
         lua_spi_checktype(L, 3, LUA_TNUMBER);
-        bits_per_word = lua_tounsigned(L, 3);
+        bits_per_word = lua_tointeger(L, 3);
 
         if ((ret = spi_set_bits_per_word(spi, bits_per_word)) < 0)
             return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
@@ -420,7 +420,7 @@ static int lua_spi_newindex(lua_State *L) {
         int ret;
 
         lua_spi_checktype(L, 3, LUA_TNUMBER);
-        extra_flags = lua_tounsigned(L, 3);
+        extra_flags = lua_tolargeinteger(L, 3);
 
         if (extra_flags > 0xff) {
             if ((ret = spi_set_extra_flags32(spi, extra_flags)) < 0)

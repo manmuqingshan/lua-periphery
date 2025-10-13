@@ -30,7 +30,7 @@ static int periphery_error_tostring(lua_State *L) {
 static int periphery_sleep(lua_State *L) {
     unsigned int duration;
 
-    duration = luaL_checkunsigned(L, 1);
+    duration = luaL_checklargeinteger(L, 1);
 
     sleep(duration);
 
@@ -41,7 +41,7 @@ static int periphery_sleep_ms(lua_State *L) {
     unsigned int duration;
     struct timespec ts;
 
-    duration = luaL_checkunsigned(L, 1);
+    duration = luaL_checklargeinteger(L, 1);
 
     ts.tv_sec = duration / 1000;
     ts.tv_nsec = (duration - ts.tv_sec*1000)*1000000;
@@ -54,7 +54,7 @@ static int periphery_sleep_us(lua_State *L) {
     unsigned int duration;
     struct timespec ts;
 
-    duration = luaL_checkunsigned(L, 1);
+    duration = luaL_checklargeinteger(L, 1);
 
     ts.tv_sec = duration / 1000000;
     ts.tv_nsec = (duration - ts.tv_sec*1000000)*1000;

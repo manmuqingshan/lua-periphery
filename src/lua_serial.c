@@ -121,12 +121,12 @@ static int lua_serial_open(lua_State *L) {
             return lua_serial_error(L, SERIAL_ERROR_ARG, 0, "Error: invalid type on table argument 'baudrate', should be number");
 
         device = lua_tostring(L, -2);
-        baudrate = lua_tounsigned(L, -1);
+        baudrate = lua_tointeger(L, -1);
 
         /* Optional databits */
         lua_getfield(L, 2, "databits");
         if (lua_isnumber(L, -1))
-            databits = lua_tounsigned(L, -1);
+            databits = lua_tointeger(L, -1);
         else if (!lua_isnil(L, -1))
             return lua_serial_error(L, SERIAL_ERROR_ARG, 0, "Error: invalid type of table argument 'databits', should be number");
 
@@ -148,7 +148,7 @@ static int lua_serial_open(lua_State *L) {
         /* Optional stopbits */
         lua_getfield(L, 2, "stopbits");
         if (lua_isnumber(L, -1))
-            stopbits = lua_tounsigned(L, -1);
+            stopbits = lua_tointeger(L, -1);
         else if (!lua_isnil(L, -1))
             return lua_serial_error(L, SERIAL_ERROR_ARG, 0, "Error: invalid type of table argument 'stopbits', should be number");
 
@@ -172,7 +172,7 @@ static int lua_serial_open(lua_State *L) {
         lua_serial_checktype(L, 3, LUA_TNUMBER);
 
         device = lua_tostring(L, 2);
-        baudrate = lua_tounsigned(L, 3);
+        baudrate = lua_tointeger(L, 3);
     }
 
     if ((ret = serial_open_advanced(serial, device, baudrate, databits, parity, stopbits, xonxoff, rtscts)) < 0)
@@ -221,14 +221,14 @@ static int lua_serial_read(lua_State *L) {
         if (!lua_isnumber(L, -1))
             return lua_serial_error(L, SERIAL_ERROR_ARG, 0, "Error: invalid type on table argument 'length', should be number");
 
-        len = lua_tounsigned(L, -1);
+        len = lua_tointeger(L, -1);
 
         /* Optional timeout argument */
         lua_getfield(L, 2, "timeout");
         if (lua_isnil(L, -1))
             ;
         else if (lua_isnumber(L, -1))
-            timeout_ms = lua_tounsigned(L, -1);
+            timeout_ms = lua_tointeger(L, -1);
         else
             return lua_serial_error(L, SERIAL_ERROR_ARG, 0, "Error: invalid type of table argument 'timeout_ms', should be nil or number");
 
@@ -236,13 +236,13 @@ static int lua_serial_read(lua_State *L) {
     } else {
         lua_serial_checktype(L, 2, LUA_TNUMBER);
 
-        len = lua_tounsigned(L, 2);
+        len = lua_tointeger(L, 2);
 
         /* Optional timeout argument */
         if (lua_isnone(L, 3) || lua_isnil(L, 3))
             ;
         else if (lua_isnumber(L, 3))
-            timeout_ms = lua_tounsigned(L, 3);
+            timeout_ms = lua_tointeger(L, 3);
         else
             return lua_serial_error(L, SERIAL_ERROR_ARG, 0, "Error: invalid type of argument 'timeout_ms', should be number or nil");
     }
@@ -408,7 +408,7 @@ static int lua_serial_index(lua_State *L) {
         if ((ret = serial_get_baudrate(serial, &baudrate)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));
 
-        lua_pushunsigned(L, baudrate);
+        lua_pushinteger(L, baudrate);
         return 1;
     } else if (strcmp(field, "databits") == 0) {
         unsigned int databits;
@@ -417,7 +417,7 @@ static int lua_serial_index(lua_State *L) {
         if ((ret = serial_get_databits(serial, &databits)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));
 
-        lua_pushunsigned(L, databits);
+        lua_pushinteger(L, databits);
         return 1;
     } else if (strcmp(field, "parity") == 0) {
         serial_parity_t parity;
@@ -440,7 +440,7 @@ static int lua_serial_index(lua_State *L) {
         if ((ret = serial_get_stopbits(serial, &stopbits)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));
 
-        lua_pushunsigned(L, stopbits);
+        lua_pushinteger(L, stopbits);
         return 1;
     } else if (strcmp(field, "xonxoff") == 0) {
         bool xonxoff;
@@ -467,7 +467,7 @@ static int lua_serial_index(lua_State *L) {
         if ((ret = serial_get_vmin(serial, &vmin)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));
 
-        lua_pushunsigned(L, vmin);
+        lua_pushinteger(L, vmin);
         return 1;
     } else if (strcmp(field, "vtime") == 0) {
         float vtime;
@@ -501,7 +501,7 @@ static int lua_serial_newindex(lua_State *L) {
         int ret;
 
         lua_serial_checktype(L, 3, LUA_TNUMBER);
-        baudrate = lua_tounsigned(L, 3);
+        baudrate = lua_tointeger(L, 3);
 
         if ((ret = serial_set_baudrate(serial, baudrate)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));
@@ -512,7 +512,7 @@ static int lua_serial_newindex(lua_State *L) {
         int ret;
 
         lua_serial_checktype(L, 3, LUA_TNUMBER);
-        databits = lua_tounsigned(L, 3);
+        databits = lua_tointeger(L, 3);
 
         if ((ret = serial_set_databits(serial, databits)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));
@@ -544,7 +544,7 @@ static int lua_serial_newindex(lua_State *L) {
         int ret;
 
         lua_serial_checktype(L, 3, LUA_TNUMBER);
-        stopbits = lua_tounsigned(L, 3);
+        stopbits = lua_tointeger(L, 3);
 
         if ((ret = serial_set_stopbits(serial, stopbits)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));
@@ -577,7 +577,7 @@ static int lua_serial_newindex(lua_State *L) {
         int ret;
 
         lua_serial_checktype(L, 3, LUA_TNUMBER);
-        vmin = lua_tounsigned(L, 3);
+        vmin = lua_tointeger(L, 3);
 
         if ((ret = serial_set_vmin(serial, vmin)) < 0)
             return lua_serial_error(L, ret, serial_errno(serial), "Error: %s", serial_errmsg(serial));

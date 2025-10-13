@@ -100,12 +100,12 @@ static int lua_mmio_open(lua_State *L) {
         lua_getfield(L, 2, "base");
         if (!lua_isnumber(L, -1))
             return lua_mmio_error(L, MMIO_ERROR_ARG, 0, "Error: invalid type of table argument 'base', should be number");
-        base = lua_tounsigned(L, -2);
+        base = lua_tolargeinteger(L, -2);
 
         lua_getfield(L, 2, "size");
         if (!lua_isnumber(L, -1))
             return lua_mmio_error(L, MMIO_ERROR_ARG, 0, "Error: invalid type of table argument 'size', should be number");
-        size = lua_tounsigned(L, -1);
+        size = lua_tolargeinteger(L, -1);
 
         /* Optional label */
         lua_getfield(L, 2, "path");
@@ -119,8 +119,8 @@ static int lua_mmio_open(lua_State *L) {
         lua_mmio_checktype(L, 2, LUA_TNUMBER);
         lua_mmio_checktype(L, 3, LUA_TNUMBER);
 
-        base = lua_tounsigned(L, 2);
-        size = lua_tounsigned(L, 3);
+        base = lua_tolargeinteger(L, 2);
+        size = lua_tolargeinteger(L, 3);
     }
 
     if ((ret = mmio_open_advanced(mmio, base, size, path)) < 0)
@@ -160,12 +160,12 @@ static int lua_mmio_read32(lua_State *L) {
     mmio = *((mmio_t **)luaL_checkudata(L, 1, "periphery.MMIO"));
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
 
-    offset = lua_tounsigned(L, 2);
+    offset = lua_tolargeinteger(L, 2);
 
     if ((ret = mmio_read32(mmio, offset, &value)) < 0)
         return lua_mmio_error(L, ret, mmio_errno(mmio), "Error: %s", mmio_errmsg(mmio));
 
-    lua_pushunsigned(L, value);
+    lua_pushlargeinteger(L, value);
 
     return 1;
 }
@@ -179,12 +179,12 @@ static int lua_mmio_read16(lua_State *L) {
     mmio = *((mmio_t **)luaL_checkudata(L, 1, "periphery.MMIO"));
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
 
-    offset = lua_tounsigned(L, 2);
+    offset = lua_tolargeinteger(L, 2);
 
     if ((ret = mmio_read16(mmio, offset, &value)) < 0)
         return lua_mmio_error(L, ret, mmio_errno(mmio), "Error: %s", mmio_errmsg(mmio));
 
-    lua_pushunsigned(L, value);
+    lua_pushlargeinteger(L, value);
 
     return 1;
 }
@@ -198,12 +198,12 @@ static int lua_mmio_read8(lua_State *L) {
     mmio = *((mmio_t **)luaL_checkudata(L, 1, "periphery.MMIO"));
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
 
-    offset = lua_tounsigned(L, 2);
+    offset = lua_tolargeinteger(L, 2);
 
     if ((ret = mmio_read8(mmio, offset, &value)) < 0)
         return lua_mmio_error(L, ret, mmio_errno(mmio), "Error: %s", mmio_errmsg(mmio));
 
-    lua_pushunsigned(L, value);
+    lua_pushlargeinteger(L, value);
 
     return 1;
 }
@@ -218,8 +218,8 @@ static int lua_mmio_write32(lua_State *L) {
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
     lua_mmio_checktype(L, 3, LUA_TNUMBER);
 
-    offset = lua_tounsigned(L, 2);
-    value = lua_tounsigned(L, 3);
+    offset = lua_tolargeinteger(L, 2);
+    value = lua_tolargeinteger(L, 3);
 
     if ((ret = mmio_write32(mmio, offset, value)) < 0)
         return lua_mmio_error(L, ret, mmio_errno(mmio), "Error: %s", mmio_errmsg(mmio));
@@ -237,8 +237,8 @@ static int lua_mmio_write16(lua_State *L) {
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
     lua_mmio_checktype(L, 3, LUA_TNUMBER);
 
-    offset = lua_tounsigned(L, 2);
-    value = lua_tounsigned(L, 3);
+    offset = lua_tolargeinteger(L, 2);
+    value = lua_tolargeinteger(L, 3);
 
     if (value > 0xffff)
         return lua_mmio_error(L, MMIO_ERROR_ARG, 0, "Error: value out of 16-bit range");
@@ -259,8 +259,8 @@ static int lua_mmio_write8(lua_State *L) {
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
     lua_mmio_checktype(L, 3, LUA_TNUMBER);
 
-    offset = lua_tounsigned(L, 2);
-    value = lua_tounsigned(L, 3);
+    offset = lua_tolargeinteger(L, 2);
+    value = lua_tolargeinteger(L, 3);
 
     if (value > 0xff)
         return lua_mmio_error(L, MMIO_ERROR_ARG, 0, "Error: value out of 8-bit range");
@@ -282,8 +282,8 @@ static int lua_mmio_read(lua_State *L) {
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
     lua_mmio_checktype(L, 3, LUA_TNUMBER);
 
-    offset = lua_tounsigned(L, 2);
-    len = lua_tounsigned(L, 3);
+    offset = lua_tolargeinteger(L, 2);
+    len = lua_tolargeinteger(L, 3);
 
     if ((buf = malloc(len)) == NULL)
         return lua_mmio_error(L, MMIO_ERROR_ALLOC, errno, "Error: allocating memory");
@@ -296,8 +296,8 @@ static int lua_mmio_read(lua_State *L) {
     /* Convert byte buffer to byte table */
     lua_newtable(L);
     for (i = 0; i < len; i++) {
-        lua_pushunsigned(L, i+1);
-        lua_pushunsigned(L, buf[i]);
+        lua_pushinteger(L, i+1);
+        lua_pushinteger(L, buf[i]);
         lua_settable(L, -3);
     }
 
@@ -317,7 +317,7 @@ static int lua_mmio_write(lua_State *L) {
     lua_mmio_checktype(L, 2, LUA_TNUMBER);
     lua_mmio_checktype(L, 3, LUA_TTABLE);
 
-    offset = lua_tounsigned(L, 2);
+    offset = lua_tolargeinteger(L, 2);
     len = luaL_len(L, 3);
 
     if ((buf = malloc(len)) == NULL)
@@ -325,14 +325,14 @@ static int lua_mmio_write(lua_State *L) {
 
     /* Convert byte table to byte buffer */
     for (i = 0; i < len; i++) {
-        lua_pushunsigned(L, i+1);
+        lua_pushinteger(L, i+1);
         lua_gettable(L, -2);
         if (!lua_isnumber(L, -1)) {
             free(buf);
             return lua_mmio_error(L, MMIO_ERROR_ARG, 0, "Error: invalid element index %d in bytes table.", i+1);
         }
 
-        buf[i] = lua_tounsigned(L, -1);
+        buf[i] = lua_tointeger(L, -1);
         lua_pop(L, 1);
     }
 
