@@ -14,7 +14,7 @@ spi = SPI{device=<path string>, mode=<number>, max_speed=<number>,
           bit_order="msb", bits_per_word=8, extra_flags=0}
 
 -- Methods
-spi:transfer(data <table>) --> <table>
+spi:transfer(data <table | string>) --> <table | string>
 spi:close()
 
 -- Properties
@@ -54,15 +54,19 @@ Returns a new SPI object on success. Raises a [SPI error](#errors) on failure.
 --------------------------------------------------------------------------------
 
 ``` lua
-spi:transfer(data <table>) --> <table>
+spi:transfer(data <table | string>) --> <table | string>
 ```
-Shift out the array of words `data` and return an array of shifted in words.
+Shift out the words in the word array or byte string `data`, and return the
+shifted in words in a word array or byte string.
 
 Example:
 ``` lua
 data_in = spi:transfer({0xaa, 0xbb, 0xcc, 0xdd})
+-- data_in is the shifted in word array, e.g. {0xff, 0xff, 0xff, 0xff}
+
+data_in = spi:transfer("\xaa\xbb\xcc\xdd")
+-- data_in is the shifted in byte string, e.g. "\xff\xff\xff\xff"
 ```
-data_in is the shifted in words, e.g. `{0xff, 0xff, 0xff, 0xff}`.
 
 Returns shifted in words on success. Raises a [SPI error](#errors) on failure.
 

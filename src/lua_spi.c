@@ -188,44 +188,59 @@ static int lua_spi_new(lua_State *L) {
 
 static int lua_spi_transfer(lua_State *L) {
     spi_t *spi;
-    uint8_t *buf;
+    const uint8_t *txbuf;
+    uint8_t *rxbuf;
     unsigned int i, len;
     int ret;
 
     spi = *((spi_t **)luaL_checkudata(L, 1, "periphery.SPI"));
-    lua_spi_checktype(L, 2, LUA_TTABLE);
+    if (lua_type(L, 2) != LUA_TTABLE && lua_type(L, 2) != LUA_TSTRING)
+        lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid argument #2 (table or string expected, got %s)", lua_typename(L, lua_type(L, 2)));
 
     len = luaL_len(L, 2);
 
-    if ((buf = malloc(len)) == NULL)
+    if ((rxbuf = malloc(len)) == NULL)
         return lua_spi_error(L, SPI_ERROR_ALLOC, errno, "Error: allocating memory");
 
-    /* Convert byte table to byte buffer */
-    for (i = 0; i < len; i++) {
-        lua_pushinteger(L, i+1);
-        lua_gettable(L, -2);
-        if (!lua_isnumber(L, -1)) {
-            free(buf);
-            return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid element index %d in bytes table.", i+1);
+    if (lua_type(L, 2) == LUA_TTABLE) {
+        /* Convert byte table to byte buffer */
+        for (i = 0; i < len; i++) {
+            lua_pushinteger(L, i+1);
+            lua_gettable(L, -2);
+            if (!lua_isnumber(L, -1)) {
+                free(rxbuf);
+                return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid element index %d in bytes table.", i+1);
+            }
+
+            rxbuf[i] = lua_tointeger(L, -1);
+            lua_pop(L, 1);
         }
 
-        buf[i] = lua_tointeger(L, -1);
-        lua_pop(L, 1);
+        txbuf = rxbuf;
+    } else {
+        /* Use byte string */
+        txbuf = (const uint8_t *)lua_tostring(L, 2);
     }
 
-    if ((ret = spi_transfer(spi, buf, buf, len)) < 0) {
-        free(buf);
+    if ((ret = spi_transfer(spi, txbuf, rxbuf, len)) < 0) {
+        free(rxbuf);
         return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
     }
 
-    /* Convert byte buffer back to bytes table */
-    for (i = 0; i < len; i++) {
-        lua_pushinteger(L, i+1);
-        lua_pushinteger(L, buf[i]);
-        lua_settable(L, -3);
+    if (lua_type(L, 2) == LUA_TTABLE) {
+        /* Convert byte buffer back to bytes table */
+        lua_newtable(L);
+        for (i = 0; i < len; i++) {
+            lua_pushinteger(L, i+1);
+            lua_pushinteger(L, rxbuf[i]);
+            lua_settable(L, -3);
+        }
+    } else {
+        /* Return received bytes as byte string */
+        lua_pushlstring(L, (char *)rxbuf, len);
     }
 
-    free(buf);
+    free(rxbuf);
 
     return 1;
 }
