@@ -9,6 +9,7 @@
 #include <lauxlib.h>
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
@@ -154,7 +155,6 @@ static int lua_i2c_transfer(lua_State *L) {
     struct i2c_msg *i2c_msgs;
     unsigned int num_msgs;
     uint16_t i2c_addr;
-    unsigned int i, j;
     int ret;
 
     i2c = *((i2c_t **)luaL_checkudata(L, 1, "periphery.I2C"));
@@ -170,9 +170,12 @@ static int lua_i2c_transfer(lua_State *L) {
 
     /* Convert transfer table to struct i2c_msg array */
     /* e.g. { {0xf0, 0xaa}, {0x00, 0x00, .flags = i2c.I2C_M_READ} } */
-    for (i = 0; i < num_msgs; i++) {
-        unsigned int msg_len, msg_flags;
+    for (unsigned int i = 0; i < num_msgs; i++) {
+        unsigned int msg_len;
+        bool msg_is_string;
+        unsigned int msg_flags = 0;
 
+        /* Get next message table */
         lua_pushinteger(L, i+1);
         lua_gettable(L, -2);
         /* Check message table is a table with length > 0 */
@@ -181,19 +184,22 @@ static int lua_i2c_transfer(lua_State *L) {
             return lua_i2c_error(L, I2C_ERROR_ARG, 0, "Error: invalid message index %d of transfer table.", i+1);
         }
 
-        /* Get message length */
-        msg_len = luaL_len(L, -1);
+        /* Check if message type is byte array or string by first element */
+        lua_pushinteger(L, 1);
+        lua_gettable(L, -2);
+        msg_is_string = lua_type(L, -1) == LUA_TSTRING;
+        /* Get message length of string or byte array */
+        msg_len = msg_is_string ? luaL_len(L, -1) : luaL_len(L, -2);
+        /* Pop message element */
+        lua_pop(L, 1);
 
         /* Get message flags */
         lua_getfield(L, -1, "flags");
-        if (lua_isnil(L, -1)) {
-            msg_flags = 0;
-        } else if (!lua_isnumber(L, -1)) {
+        if (!lua_isnil(L, -1) && !lua_isnumber(L, -1)) {
             _free_i2c_msgs(i2c_msgs, num_msgs);
             return lua_i2c_error(L, I2C_ERROR_ARG, 0, "Error: invalid message flags in message index %d of transfer table.", i+1);
-        } else {
-            msg_flags = lua_tolargeinteger(L, -1);
         }
+        msg_flags = lua_tolargeinteger(L, -1);
         /* Pop message flags */
         lua_pop(L, 1);
 
@@ -208,20 +214,30 @@ static int lua_i2c_transfer(lua_State *L) {
                 return lua_i2c_error(L, I2C_ERROR_ALLOC, errno, "Error: allocating memory for message data");
             }
 
-            /* Extract message data from table */
-            for (j = 0; j < msg_len; j++) {
-                lua_pushinteger(L, j+1);
+            if (msg_is_string) {
+                /* Copy message string to i2c message buffer */
+                lua_pushinteger(L, 1);
                 lua_gettable(L, -2);
-                /* Check message data is an integer */
-                if (!lua_isnumber(L, -1)) {
-                    _free_i2c_msgs(i2c_msgs, num_msgs);
-                    return lua_i2c_error(L, I2C_ERROR_ARG, 0, "Error: invalid message data %d in message index %d of transfer table");
-                }
+                memcpy(i2c_msgs[i].buf, lua_tostring(L, -1), msg_len);
 
-                i2c_msgs[i].buf[j] = lua_tointeger(L, -1);
-
-                /* Pop message data */
+                /* Pop message string */
                 lua_pop(L, 1);
+            } else {
+                /* Extract message bytes from table */
+                for (unsigned int j = 0; j < msg_len; j++) {
+                    lua_pushinteger(L, j+1);
+                    lua_gettable(L, -2);
+                    /* Check message byte is an integer */
+                    if (!lua_isnumber(L, -1)) {
+                        _free_i2c_msgs(i2c_msgs, num_msgs);
+                        return lua_i2c_error(L, I2C_ERROR_ARG, 0, "Error: invalid message data %d in message index %d of transfer table");
+                    }
+
+                    i2c_msgs[i].buf[j] = lua_tointeger(L, -1);
+
+                    /* Pop message element */
+                    lua_pop(L, 1);
+                }
             }
         }
 
@@ -236,17 +252,34 @@ static int lua_i2c_transfer(lua_State *L) {
     }
 
     /* Update message tables in transfer table with read data */
-    for (i = 0; i < num_msgs; i++) {
+    for (unsigned int i = 0; i < num_msgs; i++) {
         if (i2c_msgs[i].flags & I2C_M_RD) {
             /* Get message table at this index */
             lua_pushinteger(L, i+1);
             lua_gettable(L, -2);
 
-            /* For each byte of the read message, update the message table */
-            for (j = 0; j < i2c_msgs[i].len; j++) {
-                lua_pushinteger(L, j+1);
-                lua_pushinteger(L, i2c_msgs[i].buf[j]);
+            /* Get first element data */
+            lua_pushinteger(L, 1);
+            lua_gettable(L, -2);
+
+            if (lua_type(L, -1) == LUA_TSTRING) {
+                /* Pop message string */
+                lua_pop(L, 1);
+
+                /* Update message table with byte string */
+                lua_pushinteger(L, 1);
+                lua_pushlstring(L, (char *)i2c_msgs[i].buf, i2c_msgs[i].len);
                 lua_settable(L, -3);
+            } else {
+                /* Pop first message element */
+                lua_pop(L, 1);
+
+                /* For each byte of the read message, update the message table */
+                for (unsigned int j = 0; j < i2c_msgs[i].len; j++) {
+                    lua_pushinteger(L, j+1);
+                    lua_pushinteger(L, i2c_msgs[i].buf[j]);
+                    lua_settable(L, -3);
+                }
             }
 
             /* Pop message table */
@@ -256,7 +289,7 @@ static int lua_i2c_transfer(lua_State *L) {
 
     _free_i2c_msgs(i2c_msgs, num_msgs);
 
-    return 1;
+    return 0;
 }
 
 static int lua_i2c_close(lua_State *L) {

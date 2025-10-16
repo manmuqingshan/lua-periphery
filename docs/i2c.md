@@ -62,14 +62,19 @@ Returns a new I2C object on success. Raises an [I2C error](#errors) on failure.
 
 ``` lua
 i2c:transfer(address <number>, messages <table>)
+-- messages = { { <byte>, <byte>..., flags=0 }... }
+-- messages = { { <byte string>, flags=0 }... }
 ```
 Transfer `messages` to the specified I2C `address`. Modifies the `messages` table with the results of any read transactions.
 
-The messages table is an array of message tables. Each message table is an array of bytes, as well a `flags` field containing any bitwise-ORd message flags (see the [constants](#constants) section above). The most common message flag is the `I2C.I2C_M_RD` flag, which specifies a read transaction. The read length is inferred from the number of placeholder bytes in the message table.
+The messages table is an array of message tables. Each message table is an array of bytes or a single byte string, as well a `flags` field containing any bitwise-ORd message flags (see the [constants](#constants) section above). The most common message flag is the `I2C.I2C_M_RD` flag, which specifies a read transaction. The read length is inferred from the number of placeholder bytes in the message table.
 
 Example:
 ``` lua
 local msgs = { { 0xaa, 0xbb }, { 0x00, 0x00, 0x00, flags = I2C.I2C_M_RD } }
+i2c:transfer(0x50, msgs)
+
+local msgs = { { "\xaa\xbb" }, { "\x00\x00\x00", flags = I2C.I2C_M_RD } }
 i2c:transfer(0x50, msgs)
 ```
 The `msgs` messages table above specifies one write transaction with two bytes `0xaa, 0xbb`, and one read transaction with placeholders for three bytes. After the transfer completes successfully, the read message contents (`0x00, 0x00, 0x00`) will be replaced with the data read from the I2C bus in that read transaction.
