@@ -76,24 +76,61 @@ end
 
 function test_loopback()
     local spi = nil
-    local buf = {}
+    local buf_in = {}
+    local buf_out = {}
 
     ptest()
 
     passert_periphery_success("spi open", function () spi = SPI(device, 0, 100000) end)
 
+    -- Generate sequential bytes as table
     for i = 0, 31 do
-        buf[i] = i
+        buf_in[i + 1] = i
     end
 
-    passert_periphery_success("spi transfer", function () spi:transfer(buf) end)
+    -- Transfer table
+    passert_periphery_success("spi transfer table", function () buf_out = spi:transfer(buf_in) end)
 
+    -- Verify bytes
     for i = 0, 31 do
-        if buf[i] ~= i then
-            pfail(string.format("mismatch on index %d. expected 0x%02x, got 0x%02x", i, i, buf[i]))
+        if buf_out[i + 1] ~= i then
+            pfail(string.format("mismatch on index %d. expected 0x%02x, got 0x%02x", i, i, buf_out[i]))
             os.exit(1)
         end
     end
+
+    -- Generate sequential bytes as string
+    buf_in = ""
+    for i = 0, 31 do
+        buf_in = buf_in .. string.char(i)
+    end
+
+    -- Transfer string
+    passert_periphery_success("spi transfer string", function () buf_out = spi:transfer(buf_in) end)
+
+    -- Verify bytes
+    passert("verify bytes", buf_out == buf_in)
+
+    -- Generate two messages with deselect, one with table data, one with string data
+    msgs = {{deselect=true}, {""}}
+    for i = 0, 31 do
+        msgs[1][i + 1] = i
+        msgs[2][1] = msgs[2][1] .. string.char(i)
+    end
+
+    -- Transfer messages
+    passert_periphery_success("spi transfer advanced with deselect", function () spi:transfer_advanced(msgs) end)
+
+    -- Verify bytes
+    for i = 0, 31 do
+        if msgs[1][i + 1] ~= i then
+            pfail(string.format("mismatch on index %d. expected 0x%02x, got 0x%02x", i, i, msgs[1][i + 1]))
+            os.exit(1)
+        end
+    end
+
+    -- Verify bytes
+    passert("verify bytes", msgs[2][1] == buf_in)
 
     passert_periphery_success("spi close", function () spi:close() end)
 end
@@ -151,6 +188,15 @@ function test_interactive()
     passert("interactive success", io.read() == "y")
 
     passert_periphery_success("spi set mode 0", function () spi.mode = 0 end)
+
+    -- Multiple transfer
+    print("Press enter to start transfer...")
+    io.read()
+    passert_periphery_success("spi transfer advanced", function () spi:transfer_advanced({{0x55, 0xaa, 0x0f, 0xf0, deselect = true}, {"\x55\xaa\x0f\xf0"}, {0x55, 0xaa, 0x0f, 0xf0}}) end)
+    print("SPI data 0x55, 0xaa, 0x0f, 0xf0")
+    print("SPI transfer speed <= 100KHz, mode 3 occurred? y/n")
+    print("SPI transfer of three messages, with deselect after first message occurred? y/n")
+    passert("interactive success", io.read() == "y")
 
     -- 500KHz transfer
     passert_periphery_success("spi set max_speed 500000", function () spi.max_speed = 500000 end)
