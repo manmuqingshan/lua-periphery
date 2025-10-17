@@ -27,6 +27,7 @@ spi = SPI{device=<path string>, mode=<number>, max_speed=<number>, bit_order="ms
 
 -- Methods
 spi:transfer(data <table>) --> <table>
+spi:transfer_advanced(messages <table>)
 spi:close()
 
 -- Properties
@@ -245,6 +246,178 @@ static int lua_spi_transfer(lua_State *L) {
     return 1;
 }
 
+static void _free_spi_msgs(struct spi_msg *spi_msgs, unsigned int num_msgs) {
+    unsigned int i;
+
+    for (i = 0; i < num_msgs; i++) {
+        if (spi_msgs[i].rxbuf != NULL)
+            free(spi_msgs[i].rxbuf);
+    }
+    free(spi_msgs);
+}
+
+static int lua_spi_transfer_advanced(lua_State *L) {
+    spi_t *spi;
+    spi_msg_t *spi_msgs;
+    unsigned int num_msgs;
+    int ret;
+
+    spi = *((spi_t **)luaL_checkudata(L, 1, "periphery.SPI"));
+    lua_spi_checktype(L, 2, LUA_TTABLE);
+
+    num_msgs = luaL_len(L, 2);
+
+    if ((spi_msgs = malloc(num_msgs * sizeof(spi_msg_t))) == NULL)
+        return lua_spi_error(L, SPI_ERROR_ALLOC, errno, "Error: allocating memory");
+    memset(spi_msgs, 0, num_msgs * sizeof(struct spi_msg));
+
+    /* Convert message table to spi_msg_t array */
+    for (unsigned int i = 0; i < num_msgs; i++) {
+        unsigned int msg_len;
+        bool msg_is_string;
+        bool msg_deselect = false;
+        uint16_t msg_deselect_delay_us = 0;
+        uint8_t msg_word_delay_us = 0;
+
+        /* Get next message table */
+        lua_pushinteger(L, i+1);
+        lua_gettable(L, -2);
+        /* Check message table is a table with length > 0 */
+        if (!lua_istable(L, -1) || luaL_len(L, -1) == 0) {
+            _free_spi_msgs(spi_msgs, num_msgs);
+            return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid message index %d of message table.", i+1);
+        }
+
+        /* Check if message type is byte array or string by first element */
+        lua_pushinteger(L, 1);
+        lua_gettable(L, -2);
+        msg_is_string = lua_type(L, -1) == LUA_TSTRING;
+        /* Get message length of string or byte array */
+        msg_len = msg_is_string ? luaL_len(L, -1) : luaL_len(L, -2);
+        /* Pop message element */
+        lua_pop(L, 1);
+
+        /* Get deselect option */
+        lua_getfield(L, -1, "deselect");
+        if (!lua_isnil(L, -1) && !lua_isboolean(L, -1)) {
+            _free_spi_msgs(spi_msgs, num_msgs);
+            return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid deselect option type in message index %d of message table.", i+1);
+        } else {
+            msg_deselect = lua_toboolean(L, -1);
+        }
+        /* Pop deselect option */
+        lua_pop(L, 1);
+
+        /* Get deselect_delay_us option */
+        lua_getfield(L, -1, "deselect_delay_us");
+        if (!lua_isnil(L, -1) && !lua_isnumber(L, -1)) {
+            _free_spi_msgs(spi_msgs, num_msgs);
+            return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid deselect_delay_us option type in message index %d of message table.", i+1);
+        } else {
+            msg_deselect_delay_us = lua_tointeger(L, -1);
+        }
+        /* Pop deselect_delay_us option */
+        lua_pop(L, 1);
+
+        /* Get word_delay_us option */
+        lua_getfield(L, -1, "word_delay_us");
+        if (!lua_isnil(L, -1) && !lua_isnumber(L, -1)) {
+            _free_spi_msgs(spi_msgs, num_msgs);
+            return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid word_delay_us option type in message index %d of message table.", i+1);
+        } else {
+            msg_word_delay_us = lua_tointeger(L, -1);
+        }
+        /* Pop deselect_delay_us option */
+        lua_pop(L, 1);
+
+        /* Prepare spi message */
+        spi_msgs[i].len = msg_len;
+        spi_msgs[i].deselect = msg_deselect;
+        spi_msgs[i].deselect_delay_us = msg_deselect_delay_us;
+        spi_msgs[i].word_delay_us = msg_word_delay_us;
+
+        /* Allocate memory for message data */
+        if ((spi_msgs[i].rxbuf = malloc(msg_len)) == NULL) {
+            _free_spi_msgs(spi_msgs, num_msgs);
+            return lua_spi_error(L, SPI_ERROR_ALLOC, errno, "Error: allocating memory for message data");
+        }
+        spi_msgs[i].txbuf = spi_msgs[i].rxbuf;
+
+        if (msg_is_string) {
+            /* Copy message string to SPI message buffer */
+            lua_pushinteger(L, 1);
+            lua_gettable(L, -2);
+            memcpy(spi_msgs[i].rxbuf, lua_tostring(L, -1), msg_len);
+
+            /* Pop message string */
+            lua_pop(L, 1);
+        } else {
+            /* Extract message bytes from table */
+            for (unsigned int j = 0; j < msg_len; j++) {
+                lua_pushinteger(L, j+1);
+                lua_gettable(L, -2);
+                /* Check message byte is an integer */
+                if (!lua_isnumber(L, -1)) {
+                    _free_spi_msgs(spi_msgs, num_msgs);
+                    return lua_spi_error(L, SPI_ERROR_ARG, 0, "Error: invalid message data %d in message index %d of transfer table");
+                }
+
+                spi_msgs[i].rxbuf[j] = lua_tointeger(L, -1);
+
+                /* Pop message element */
+                lua_pop(L, 1);
+            }
+        }
+
+        /* Pop message table */
+        lua_pop(L, 1);
+    }
+
+    /* Make SPI transfer */
+    if ((ret = spi_transfer_advanced(spi, spi_msgs, num_msgs)) < 0) {
+        _free_spi_msgs(spi_msgs, num_msgs);
+        return lua_spi_error(L, ret, spi_errno(spi), "Error: %s", spi_errmsg(spi));
+    }
+
+    /* Update message tables with shfited in words */
+    for (unsigned int i = 0; i < num_msgs; i++) {
+        /* Get message table at this index */
+        lua_pushinteger(L, i+1);
+        lua_gettable(L, -2);
+
+        /* Get first message element */
+        lua_pushinteger(L, 1);
+        lua_gettable(L, -2);
+
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            /* Pop message string */
+            lua_pop(L, 1);
+
+            /* Update message table with byte string */
+            lua_pushinteger(L, 1);
+            lua_pushlstring(L, (char *)spi_msgs[i].rxbuf, spi_msgs[i].len);
+            lua_settable(L, -3);
+        } else {
+            /* Pop first message element */
+            lua_pop(L, 1);
+
+            /* For each byte of the read message, update the message table */
+            for (unsigned int j = 0; j < spi_msgs[i].len; j++) {
+                lua_pushinteger(L, j+1);
+                lua_pushinteger(L, spi_msgs[i].rxbuf[j]);
+                lua_settable(L, -3);
+            }
+        }
+
+        /* Pop message table */
+        lua_pop(L, 1);
+    }
+
+    _free_spi_msgs(spi_msgs, num_msgs);
+
+    return 0;
+}
+
 static int lua_spi_close(lua_State *L) {
     spi_t *spi;
     int ret;
@@ -454,6 +627,7 @@ static int lua_spi_newindex(lua_State *L) {
 static const struct luaL_Reg periphery_spi_m[] = {
     {"close", lua_spi_close},
     {"transfer", lua_spi_transfer},
+    {"transfer_advanced", lua_spi_transfer_advanced},
     {"__gc", lua_spi_gc},
     {"__tostring", lua_spi_tostring},
     {"__index", lua_spi_index},

@@ -15,6 +15,7 @@ spi = SPI{device=<path string>, mode=<number>, max_speed=<number>,
 
 -- Methods
 spi:transfer(data <table | string>) --> <table | string>
+spi:transfer_advanced(messages <table>)
 spi:close()
 
 -- Properties
@@ -69,6 +70,28 @@ data_in = spi:transfer("\xaa\xbb\xcc\xdd")
 ```
 
 Returns shifted in words on success. Raises a [SPI error](#errors) on failure.
+
+--------------------------------------------------------------------------------
+
+``` lua
+spi:transfer_advanced(messages <table>)
+-- messages = { { <byte>, <byte>..., deselect=false, deselect_delay_us=0, word_delay_us=0 }... }
+-- messages = { { <byte string>, deselect=false, deselect_delay_us=0, word_delay_us=0 }... }
+```
+Transfer messages. Modifies the `messages` table with shifted in words.
+
+The messages table is an array of message tables. Each message table is an array of bytes or a single byte string, with optional `deselect`, `deselect_delay_us`, and `word_delay_us` fields. If `deselect` is true, deselect the device before reselecting it for the following transfer. `deselect_delay_us` specifies a delay in microseconds before deselection when `deselect` is true. `word_delay_us` specifies a delay in microseconds between words within a transfer. Note that `deselect_delay_us` and `word_delay_us` may not by supported by all SPI controllers and may be silently ignored.
+
+Example:
+``` lua
+local msgs = { { 0xaa, 0xbb, 0xcc, 0xdd, deselect = true }, { 0xee, 0xff, 0xee, 0xdd } }
+spi:transfer_advanced(msgs)
+
+local msgs = { { "\xaa\xbb\xcc\xdd", deselect = true }, { "\xee\xff\xee\xdd" } }
+spi:transfer_advanced(msgs)
+```
+
+Raises a [SPI error](#errors) on failure.
 
 --------------------------------------------------------------------------------
 
