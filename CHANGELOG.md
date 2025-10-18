@@ -1,3 +1,22 @@
+* v2.5.0 - 11/02/2025
+    * Bump c-periphery dependency version to v2.5.0 for new APIs in MMIO, SPI,
+      GPIO, LED.
+    * Improve integer handling across Lua versions.
+    * MMIO
+        * Add `read64()` and `write64()` methods.
+    * SPI
+        * Add support for byte strings to `transfer()`.
+        * Add `transfer_advanced()` method for transferring multiple messages,
+          with optional deselect between messages, deselect delay, and word
+          delay.
+    * I2C
+        * Add support for byte strings to `transfer()`.
+    * GPIO
+        * Add `event_clock` property.
+        * Add `debounce_us` property.
+    * LED
+        * Add `trigger` and `triggers` properties.
+
 * v2.4.3 - 03/02/2025
     * Bump c-periphery dependency version to v2.4.3 for build fix of character
       device GPIO support tests with alternate shells and older versions of
