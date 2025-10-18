@@ -13,8 +13,8 @@ local GPIO = periphery.GPIO
 -- Constructor (for character device GPIO)
 gpio = GPIO(path <string>, line <number|string>, direction <string>)
 gpio = GPIO{path=<string>, line=<number|string>, direction=<string>,
-            edge="none", event_clock="realtime", bias="default",
-            drive="default", inverted=false, label=nil}
+            edge="none", event_clock="realtime", debounce_us=0,
+            bias="default", drive="default", inverted=false, label=nil}
 -- Constructor (for sysfs GPIO)
 gpio = GPIO(line <number>, direction <string>)
 gpio = GPIO{line=<number>, direction=<string>}
@@ -35,6 +35,7 @@ GPIO.poll_multiple(gpios <table>, [timeout_ms <number|nil>]) --> <table>
 gpio.direction      mutable <string>
 gpio.edge           mutable <string>
 gpio.event_clock    mutable <string>
+gpio.debounce_us    mutable <number>
 gpio.bias           mutable <string>
 gpio.drive          mutable <string>
 gpio.inverted       mutable <boolean>
@@ -84,13 +85,13 @@ gpio.chip_label     immutable <string>
 ``` lua
 GPIO(path <string>, line <number|string>, direction <string>) --> <GPIO object>
 GPIO{path=<string>, line=<number|string>, direction=<string>,
-     edge="none", event_clock="realtime", bias="default",
-     drive="default", inverted=false, label=nil} --> <GPIO object>
+     edge="none", event_clock="realtime", debounce_us=0,
+     bias="default", drive="default", inverted=false, label=nil} --> <GPIO object>
 ```
 
 Instantiate a GPIO object and open the character device GPIO with the specified line and direction at the specified GPIO chip path (e.g. `/dev/gpiochip0`). Default properties can be overridden with the table constructor. Line can be a number or string name. Direction can be "in", "out", "low", "high" (see [constants](#constants) above).
 
-Interrupt edge can be "none", "rising", "falling", or "both" (see [constants](#constants) above). Event clock can be "realtime", "monotonic", or "hte" (see [constants](#constants) above). Line bias can be "default", "pull_up", "pull_down", or "disable" (see [constants](#constants) above). Line drive can be "default", "open_drain", or "open_source" (see [constants](#constants) above). Inverted (active low) can be true or false. Label can be a string or nil for the default consumer label.
+Interrupt edge can be "none", "rising", "falling", or "both" (see [constants](#constants) above). Event clock can be "realtime", "monotonic", or "hte" (see [constants](#constants) above). Debounce period is in microseconds. Line bias can be "default", "pull_up", "pull_down", or "disable" (see [constants](#constants) above). Line drive can be "default", "open_drain", or "open_source" (see [constants](#constants) above). Inverted (active low) can be true or false. Label can be a string or nil for the default consumer label.
 
 Example:
 ``` lua
@@ -214,6 +215,15 @@ Property gpio.event_clock   mutable <string>
 Get or set the GPIO's event clock. Can be "realtime", "monotonic", or "hte" (see [constants](#constants) above).
 
 Raises a [GPIO error](#errors) on assignment with an invalid event clock.
+
+--------------------------------------------------------------------------------
+
+``` lua
+Property gpio.debounce_us   mutable <number>
+```
+Get or set the GPIO's debounce period in microseconds.
+
+Raises a [GPIO error](#errors) on assignment with an invalid debounce period.
 
 --------------------------------------------------------------------------------
 
@@ -369,6 +379,7 @@ print("gpio_in properties")
 print(string.format("\tdirection: %s", gpio_in.direction))
 print(string.format("\tedge: %s", gpio_in.edge))
 print(string.format("\tevent_clock: %s", gpio_in.event_clock))
+print(string.format("\tdebounce_us: %d", gpio_in.debounce_us))
 print(string.format("\tline: %d", gpio_in.line))
 print(string.format("\tfd: %d", gpio_in.fd))
 print(string.format("\tname: %s", gpio_in.name))

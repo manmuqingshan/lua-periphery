@@ -23,7 +23,7 @@ local GPIO = periphery.GPIO
 
 -- Constructor (for character device GPIO)
 gpio = GPIO(path <string>, line <number>, direction <string>)
-gpio = GPIO{path=<string>, line=<number|string>, direction=<string>, edge="none", event_clock="realtime", bias="default", drive="default", inverted=false, label=nil}
+gpio = GPIO{path=<string>, line=<number|string>, direction=<string>, edge="none", event_clock="realtime", debounce_us=0, bias="default", drive="default", inverted=false, label=nil}
 -- Constructor (for sysfs GPIO)
 gpio = GPIO(line <number>, direction <string>)
 gpio = GPIO{line=<number>, direction=<string>}
@@ -44,6 +44,7 @@ GPIO.poll_multiple(gpios <table>, [timeout_ms <number|nil>]) --> <table>
 gpio.direction      mutable <string>
 gpio.edge           mutable <string>
 gpio.event_clock    mutable <string>
+gpio.debounce_us    mutable <number>
 gpio.bias           mutable <string>
 gpio.drive          mutable <string>
 gpio.inverted       mutable <boolean>
@@ -112,6 +113,7 @@ static int lua_gpio_open(lua_State *L) {
 
     gpio_edge_t edge = GPIO_EDGE_NONE;
     gpio_event_clock_t event_clock = GPIO_EVENT_CLOCK_REALTIME;
+    uint32_t debounce_us = 0;
     gpio_bias_t bias = GPIO_BIAS_DEFAULT;
     gpio_drive_t drive = GPIO_DRIVE_DEFAULT;
     bool inverted = false;
@@ -174,6 +176,13 @@ static int lua_gpio_open(lua_State *L) {
                 return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid table argument 'event_clock', should be 'realtime', 'monotonic', or 'hte'");
         } else if (!lua_isnil(L, -1))
             return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid type on table argument 'event_clock', should be string");
+
+        /* Optional debounce period */
+        lua_getfield(L, 2, "debounce_us");
+        if (lua_type(L, -1) == LUA_TNUMBER)
+            debounce_us = lua_tointeger(L, -1);
+        else if (!lua_isnil(L, -1))
+            return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid type of table argument 'debounce_us', should be number");
 
         /* Optional bias */
         lua_getfield(L, 2, "bias");
@@ -262,6 +271,7 @@ static int lua_gpio_open(lua_State *L) {
             .direction = direction,
             .edge = edge,
             .event_clock = event_clock,
+            .debounce_us = debounce_us,
             .bias = bias,
             .drive = drive,
             .inverted = inverted,
@@ -275,6 +285,7 @@ static int lua_gpio_open(lua_State *L) {
             .direction = direction,
             .edge = edge,
             .event_clock = event_clock,
+            .debounce_us = debounce_us,
             .bias = bias,
             .drive = drive,
             .inverted = inverted,
@@ -597,6 +608,15 @@ static int lua_gpio_index(lua_State *L) {
             default: lua_pushstring(L, "unknown"); break;
         }
         return 1;
+    } else if (strcmp(field, "debounce_us") == 0) {
+        uint32_t debounce_us;
+        int ret;
+
+        if ((ret = gpio_get_debounce_us(gpio, &debounce_us)) < 0)
+            return lua_gpio_error(L, ret, gpio_errno(gpio), "Error: %s", gpio_errmsg(gpio));
+
+        lua_pushlargeinteger(L, debounce_us);
+        return 1;
     } else if (strcmp(field, "bias") == 0) {
         gpio_bias_t bias;
         int ret;
@@ -730,6 +750,17 @@ static int lua_gpio_newindex(lua_State *L) {
             return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid event clock, should be 'realtime', 'monotonic', or 'hte'");
 
         if ((ret = gpio_set_event_clock(gpio, event_clock)) < 0)
+            return lua_gpio_error(L, ret, gpio_errno(gpio), "Error: %s", gpio_errmsg(gpio));
+
+        return 0;
+    } else if (strcmp(field, "debounce_us") == 0) {
+        int ret;
+
+        uint32_t value;
+        lua_gpio_checktype(L, 3, LUA_TNUMBER);
+        value = lua_tointeger(L, 3);
+
+        if ((ret = gpio_set_debounce_us(gpio, value)) < 0)
             return lua_gpio_error(L, ret, gpio_errno(gpio), "Error: %s", gpio_errmsg(gpio));
 
         return 0;
