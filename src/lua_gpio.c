@@ -23,7 +23,7 @@ local GPIO = periphery.GPIO
 
 -- Constructor (for character device GPIO)
 gpio = GPIO(path <string>, line <number>, direction <string>)
-gpio = GPIO{path=<string>, line=<number|string>, direction=<string>, edge="none", bias="default", drive="default", inverted=false, label=nil}
+gpio = GPIO{path=<string>, line=<number|string>, direction=<string>, edge="none", event_clock="realtime", bias="default", drive="default", inverted=false, label=nil}
 -- Constructor (for sysfs GPIO)
 gpio = GPIO(line <number>, direction <string>)
 gpio = GPIO{line=<number>, direction=<string>}
@@ -43,6 +43,7 @@ GPIO.poll_multiple(gpios <table>, [timeout_ms <number|nil>]) --> <table>
 -- Properties
 gpio.direction      mutable <string>
 gpio.edge           mutable <string>
+gpio.event_clock    mutable <string>
 gpio.bias           mutable <string>
 gpio.drive          mutable <string>
 gpio.inverted       mutable <boolean>
@@ -110,6 +111,7 @@ static int lua_gpio_open(lua_State *L) {
     int ret;
 
     gpio_edge_t edge = GPIO_EDGE_NONE;
+    gpio_event_clock_t event_clock = GPIO_EVENT_CLOCK_REALTIME;
     gpio_bias_t bias = GPIO_BIAS_DEFAULT;
     gpio_drive_t drive = GPIO_DRIVE_DEFAULT;
     bool inverted = false;
@@ -157,6 +159,21 @@ static int lua_gpio_open(lua_State *L) {
                 return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid table argument 'edge', should be 'none', 'rising', 'falling', or 'both'");
         } else if (!lua_isnil(L, -1))
             return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid type on table argument 'edge', should be string");
+
+        /* Optional event clock */
+        lua_getfield(L, 2, "event_clock");
+        if (lua_isstring(L, -1)) {
+            const char *value = lua_tostring(L, -1);
+            if (strcmp(value, "realtime") == 0)
+                event_clock = GPIO_EVENT_CLOCK_REALTIME;
+            else if (strcmp(value, "monotonic") == 0)
+                event_clock = GPIO_EVENT_CLOCK_MONOTONIC;
+            else if (strcmp(value, "hte") == 0)
+                event_clock = GPIO_EVENT_CLOCK_HTE;
+            else
+                return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid table argument 'event_clock', should be 'realtime', 'monotonic', or 'hte'");
+        } else if (!lua_isnil(L, -1))
+            return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid type on table argument 'event_clock', should be string");
 
         /* Optional bias */
         lua_getfield(L, 2, "bias");
@@ -244,6 +261,7 @@ static int lua_gpio_open(lua_State *L) {
         gpio_config_t config = {
             .direction = direction,
             .edge = edge,
+            .event_clock = event_clock,
             .bias = bias,
             .drive = drive,
             .inverted = inverted,
@@ -256,6 +274,7 @@ static int lua_gpio_open(lua_State *L) {
         gpio_config_t config = {
             .direction = direction,
             .edge = edge,
+            .event_clock = event_clock,
             .bias = bias,
             .drive = drive,
             .inverted = inverted,
@@ -564,6 +583,20 @@ static int lua_gpio_index(lua_State *L) {
             default: lua_pushstring(L, "unknown"); break;
         }
         return 1;
+    } else if (strcmp(field, "event_clock") == 0) {
+        gpio_event_clock_t event_clock;
+        int ret;
+
+        if ((ret = gpio_get_event_clock(gpio, &event_clock)) < 0)
+            return lua_gpio_error(L, ret, gpio_errno(gpio), "Error: %s", gpio_errmsg(gpio));
+
+        switch (event_clock) {
+            case GPIO_EVENT_CLOCK_REALTIME: lua_pushstring(L, "realtime"); break;
+            case GPIO_EVENT_CLOCK_MONOTONIC: lua_pushstring(L, "monotonic"); break;
+            case GPIO_EVENT_CLOCK_HTE: lua_pushstring(L, "hte"); break;
+            default: lua_pushstring(L, "unknown"); break;
+        }
+        return 1;
     } else if (strcmp(field, "bias") == 0) {
         gpio_bias_t bias;
         int ret;
@@ -676,6 +709,27 @@ static int lua_gpio_newindex(lua_State *L) {
             return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid edge, should be 'none', 'rising', 'falling', or 'both'");
 
         if ((ret = gpio_set_edge(gpio, edge)) < 0)
+            return lua_gpio_error(L, ret, gpio_errno(gpio), "Error: %s", gpio_errmsg(gpio));
+
+        return 0;
+    } else if (strcmp(field, "event_clock") == 0) {
+        gpio_event_clock_t event_clock;
+        int ret;
+
+        const char *value;
+        lua_gpio_checktype(L, 3, LUA_TSTRING);
+        value = lua_tostring(L, 3);
+
+        if (strcmp(value, "realtime") == 0)
+            event_clock = GPIO_EVENT_CLOCK_REALTIME;
+        else if (strcmp(value, "monotonic") == 0)
+            event_clock = GPIO_EVENT_CLOCK_MONOTONIC;
+        else if (strcmp(value, "hte") == 0)
+            event_clock = GPIO_EVENT_CLOCK_HTE;
+        else
+            return lua_gpio_error(L, GPIO_ERROR_ARG, 0, "Error: invalid event clock, should be 'realtime', 'monotonic', or 'hte'");
+
+        if ((ret = gpio_set_event_clock(gpio, event_clock)) < 0)
             return lua_gpio_error(L, ret, gpio_errno(gpio), "Error: %s", gpio_errmsg(gpio));
 
         return 0;
