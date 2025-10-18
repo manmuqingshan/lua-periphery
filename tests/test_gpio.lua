@@ -98,6 +98,8 @@ function test_open_config_close()
     passert_periphery_error("set interrupt edge on output GPIO", function () gpio.edge = "rising" end, "GPIO_ERROR_INVALID_OPERATION")
     -- Attempt to set event clock on output GPIO
     passert_periphery_error("set event clock on output GPIO", function () gpio.event_clock = "hte" end, "GPIO_ERROR_INVALID_OPERATION")
+    -- Attempt to set debounce on output GPIO
+    passert_periphery_error("set debounce on output GPIO", function () gpio.debounce_us = 10 end, "GPIO_ERROR_INVALID_OPERATION")
     -- Attempt to read event on output GPIO
     passert_periphery_error("read event on output GPIO", function () gpio:read_event() end, "GPIO_ERROR_INVALID_OPERATION")
 
@@ -124,6 +126,13 @@ function test_open_config_close()
     -- Set event clock monotonic, check event clock monotonic
     passert_periphery_success("set event clock monotonic", function () gpio.event_clock = "monotonic" end)
     passert("event clock is none", gpio.event_clock == "monotonic")
+
+    -- Set debounce, check debounce
+    passert_periphery_success("set debounce", function () gpio.debounce_us = 10 end)
+    passert("debounce us is 10", gpio.debounce_us == 10)
+    -- Disable debounce, check debounce
+    passert_periphery_success("disable debounce", function () gpio.debounce_us = 0 end)
+    passert("debounce us is 0", gpio.debounce_us == 0)
 
     -- Set bias pull up, check bias pull up
     passert_periphery_success("set bias pull-up", function () gpio.bias = "pull_up" end)
