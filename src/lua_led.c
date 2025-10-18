@@ -32,7 +32,9 @@ led:close()
 
 -- Properties
 led.brightness      mutable <number>
+led.trigger         mutable <string>
 led.max_brightness  immutable <number>
+led.triggers        immutable <table>
 led.name            immutable <string>
 */
 
@@ -237,6 +239,15 @@ static int lua_led_index(lua_State *L) {
 
         lua_pushlargeinteger(L, brightness);
         return 1;
+    } else if (strcmp(field, "trigger") == 0) {
+        char trigger[64];
+        int ret;
+
+        if ((ret = led_get_trigger(led, trigger, sizeof(trigger))) < 0)
+            return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
+
+        lua_pushstring(L, trigger);
+        return 1;
     } else if (strcmp(field, "max_brightness") == 0) {
         unsigned int max_brightness;
         int ret;
@@ -245,6 +256,24 @@ static int lua_led_index(lua_State *L) {
             return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
 
         lua_pushlargeinteger(L, max_brightness);
+        return 1;
+    } else if (strcmp(field, "triggers") == 0) {
+        unsigned int count;
+        int ret;
+        char trigger[64];
+
+        if ((ret = led_get_triggers_count(led, &count)) < 0)
+            return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
+
+        lua_newtable(L);
+        for (unsigned int i = 0; i < count; i++) {
+            if ((ret = led_get_triggers_entry(led, i, trigger, sizeof(trigger))) < 0)
+                return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
+
+            lua_pushinteger(L, i+1);
+            lua_pushstring(L, trigger);
+            lua_settable(L, -3);
+        }
         return 1;
     }
 
@@ -266,6 +295,8 @@ static int lua_led_newindex(lua_State *L) {
         return lua_led_error(L, LED_ERROR_ARG, 0, "Error: immutable property");
     } else if (strcmp(field, "max_brightness") == 0) {
         return lua_led_error(L, LED_ERROR_ARG, 0, "Error: immutable property");
+    } else if (strcmp(field, "triggers") == 0) {
+        return lua_led_error(L, LED_ERROR_ARG, 0, "Error: immutable property");
     } else if (strcmp(field, "brightness") == 0) {
         unsigned int brightness;
         int ret;
@@ -274,6 +305,17 @@ static int lua_led_newindex(lua_State *L) {
         brightness = lua_tolargeinteger(L, 3);
 
         if ((ret = led_set_brightness(led, brightness)) < 0)
+            return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
+
+        return 0;
+    } else if (strcmp(field, "trigger") == 0) {
+        const char *value;
+        int ret;
+
+        lua_led_checktype(L, 3, LUA_TSTRING);
+        value = lua_tostring(L, 3);
+
+        if ((ret = led_set_trigger(led, value)) < 0)
             return lua_led_error(L, ret, led_errno(led), "Error: %s", led_errmsg(led));
 
         return 0;

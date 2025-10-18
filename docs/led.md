@@ -19,7 +19,9 @@ led:close()
 
 -- Properties
 led.brightness      mutable <number>
+led.trigger         mutable <string>
 led.max_brightness  immutable <number>
+led.triggers        immutable <table>
 led.name            immutable <string>
 ```
 
@@ -83,9 +85,27 @@ Raises an [LED error](#errors) on failure.
 --------------------------------------------------------------------------------
 
 ``` lua
+Property led.trigger            mutable <string>
+```
+Get or set the LED's active trigger.
+
+Raises an [LED error](#errors) on failure.
+
+--------------------------------------------------------------------------------
+
+``` lua
 Property led.max_brightness     immutable <number>
 ```
 Get the LED's max brightness.
+
+Raises an [LED error](#errors) on failure and on assignment.
+
+--------------------------------------------------------------------------------
+
+``` lua
+Property led.triggers           immutable <table>
+```
+Get the LED's available triggers.
 
 Raises an [LED error](#errors) on failure and on assignment.
 
