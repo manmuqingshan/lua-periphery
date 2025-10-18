@@ -57,6 +57,8 @@ function test_open_config_close()
     passert_periphery_error("set invalid direction", function () gpio.direction = "blah" end, "GPIO_ERROR_ARG")
     -- Set invalid edge
     passert_periphery_error("set invalid edge", function () gpio.edge = "blah" end, "GPIO_ERROR_ARG")
+    -- Set invalid event clock
+    passert_periphery_error("set invalid event clock", function () gpio.event_clock = "blah" end, "GPIO_ERROR_ARG")
     -- Set invalid bias
     passert_periphery_error("set invalid bias", function () gpio.bias = "blah" end, "GPIO_ERROR_ARG")
     -- Set invalid drive
@@ -94,6 +96,8 @@ function test_open_config_close()
 
     -- Attempt to set interrupt edge on output GPIO
     passert_periphery_error("set interrupt edge on output GPIO", function () gpio.edge = "rising" end, "GPIO_ERROR_INVALID_OPERATION")
+    -- Attempt to set event clock on output GPIO
+    passert_periphery_error("set event clock on output GPIO", function () gpio.event_clock = "hte" end, "GPIO_ERROR_INVALID_OPERATION")
     -- Attempt to read event on output GPIO
     passert_periphery_error("read event on output GPIO", function () gpio:read_event() end, "GPIO_ERROR_INVALID_OPERATION")
 
@@ -113,9 +117,13 @@ function test_open_config_close()
     -- Set edge both, check edge both
     passert_periphery_success("set edge both", function () gpio.edge = "both" end)
     passert("edge is both", gpio.edge == "both")
-    -- Set edge none, check edge none
-    passert_periphery_success("set edge none", function () gpio.edge = "none" end)
-    passert("edge is none", gpio.edge == "none")
+
+    -- Set event clock realtime, check event clock realtime
+    passert_periphery_success("set event clock realtime", function () gpio.event_clock = "realtime" end)
+    passert("event clock is none", gpio.event_clock == "realtime")
+    -- Set event clock monotonic, check event clock monotonic
+    passert_periphery_success("set event clock monotonic", function () gpio.event_clock = "monotonic" end)
+    passert("event clock is none", gpio.event_clock == "monotonic")
 
     -- Set bias pull up, check bias pull up
     passert_periphery_success("set bias pull-up", function () gpio.bias = "pull_up" end)
@@ -275,37 +283,64 @@ function test_loopback()
 end
 
 function test_interactive()
-    local gpio = nil
+    local gpio_out = nil
+    local gpio_in = nil
 
     ptest()
 
-    passert_periphery_success("gpio out open", function () gpio = GPIO(path, line_output, "out") end)
+    passert_periphery_success("gpio out open", function () gpio_out = GPIO(path, line_output, "out") end)
 
     print("Starting interactive test. Get out your multimeter, buddy!")
     print("Press enter to continue...")
     io.read()
 
     -- Check tostring
-    io.write(string.format("GPIO description: %s\n", gpio:__tostring()))
+    io.write(string.format("GPIO description: %s\n", gpio_out:__tostring()))
     print("GPIO description looks OK? y/n")
     passert("interactive success", io.read() == "y")
 
     -- Drive GPIO out low
-    passert_periphery_success("gpio out low", function () gpio:write(false) end)
+    passert_periphery_success("gpio out low", function () gpio_out:write(false) end)
     print("GPIO out is low? y/n")
     passert("interactive success", io.read() == "y")
 
     -- Drive GPIO out high
-    passert_periphery_success("gpio out high", function () gpio:write(true) end)
+    passert_periphery_success("gpio out high", function () gpio_out:write(true) end)
     print("GPIO out is high? y/n")
     passert("interactive success", io.read() == "y")
 
     -- Drive GPIO out low
-    passert_periphery_success("gpio out low", function () gpio:write(false) end)
+    passert_periphery_success("gpio out low", function () gpio_out:write(false) end)
     print("GPIO out is low? y/n")
     passert("interactive success", io.read() == "y")
 
-    passert_periphery_success("close gpio", function () gpio:close() end)
+    passert_periphery_success("gpio in open", function () gpio_in = GPIO(path, line_input, "in") end)
+
+    -- Set both edge and realtime event clock
+    passert_periphery_success("set gpio in edge both", function () gpio_in.edge = "both" end)
+    passert_periphery_success("set gpio in event clock realtime", function () gpio_in.event_clock = "realtime" end)
+
+    -- Read line event with realtime event clock
+    print("Driving GPIO out high and reading GPIO in line event...")
+    passert_periphery_success("write gpio out high", function () gpio_out:write(true) end)
+    local event = gpio_in:read_event()
+    passert("event edge is rising", event.edge == "rising")
+    io.write(string.format("Line event timestamp %d is realtime? y/n\n", event.timestamp))
+    passert("interactive success", io.read() == "y")
+
+    -- Set monotonic event clock
+    passert_periphery_success("set gpio in event clock monotonic", function () gpio_in.event_clock = "monotonic" end)
+
+    -- Read line event with monotonic event clock
+    print("Driving GPIO out low and reading GPIO in line event...")
+    passert_periphery_success("write gpio out low", function () gpio_out:write(false) end)
+    local event = gpio_in:read_event()
+    passert("event edge is falling", event.edge == "falling")
+    io.write(string.format("Line event timestamp %d is monotonic? y/n\n", event.timestamp))
+    passert("interactive success", io.read() == "y")
+
+    passert_periphery_success("close gpio in", function () gpio_in:close() end)
+    passert_periphery_success("close gpio out", function () gpio_out:close() end)
 end
 
 if #arg < 3 then
