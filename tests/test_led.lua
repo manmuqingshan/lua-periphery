@@ -39,6 +39,13 @@ function test_open_config_close()
     passert("property name", led.name == led_name)
     passert("max_brightness > 0", led.max_brightness > 0)
 
+    -- Check setting invalid brightness
+    passert_periphery_error("invalid brightness", function () led.brightness = led.max_brightness + 1 end, "LED_ERROR_ARG")
+
+    -- Check trigger and triggers
+    passert("trigger is set", led.trigger ~= "")
+    passert("triggers count is non-zero", #led.triggers > 0)
+
     -- Write true, read true, check brightness is max
     led:write(true)
     periphery.sleep_ms(10)
@@ -72,6 +79,13 @@ function test_open_config_close()
     led.brightness = 0
     periphery.sleep_ms(10)
     passert("brightness is zero", led.brightness == 0)
+
+    -- Set trigger to default, check isn't none
+    led.trigger = "default"
+    passert("trigger is not none", led.trigger ~= "none")
+    -- Set trigger to none, check trigger
+    led.trigger = "none"
+    passert("trigger is none", led.trigger == "none")
 
     -- Close LED
     passert_periphery_success("close LED", function () led:close() end)
@@ -107,14 +121,10 @@ function test_interactive()
     print("LED description looks OK? y/n")
     passert("interactive success", io.read() == "y")
 
-    -- Turn LED off
-    led:write(false)
-    print("LED is off? y/n")
-    passert("interactive success", io.read() == "y")
-
-    -- Turn LED on
-    led:write(true)
-    print("LED is on? y/n")
+    -- Check trigger
+    io.write(string.format("LED active trigger: %s\n", led.trigger))
+    io.write(string.format("LED available triggers (%d): %s\n", #led.triggers, table.concat(led.triggers, " ")))
+    print("LED triggers look OK? y/n")
     passert("interactive success", io.read() == "y")
 
     -- Turn LED off
@@ -126,6 +136,19 @@ function test_interactive()
     led:write(true)
     print("LED is on? y/n")
     passert("interactive success", io.read() == "y")
+
+    -- Turn LED off
+    led:write(false)
+    print("LED is off? y/n")
+    passert("interactive success", io.read() == "y")
+
+    -- Turn LED on
+    led:write(true)
+    print("LED is on? y/n")
+    passert("interactive success", io.read() == "y")
+
+    -- Restore default trigger
+    led.trigger = "default"
 
     passert_periphery_success("close LED", function () led:close() end)
 end
