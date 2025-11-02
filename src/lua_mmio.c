@@ -109,7 +109,7 @@ static int lua_mmio_open(lua_State *L) {
             return lua_mmio_error(L, MMIO_ERROR_ARG, 0, "Error: invalid type of table argument 'size', should be number");
         size = lua_tolargeinteger(L, -1);
 
-        /* Optional label */
+        /* Optional custom path */
         lua_getfield(L, 2, "path");
         if (lua_isstring(L, -1))
             path = lua_tostring(L, -1);
