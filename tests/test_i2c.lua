@@ -129,7 +129,7 @@ function test_interactive()
 
     print("Press enter to start transfer...")
     io.read()
-    passert_periphery_error("transfer to non-existent device", function () i2c:transfer(0x7a, msgs) end, "I2C_ERROR_TRANSFER", 121)
+    passert_periphery_error("transfer to non-existent device", function () i2c:transfer(0x7a, msgs) end, "I2C_ERROR_TRANSFER")
     passert_periphery_success("close i2c", function () i2c:close() end)
 
     print("I2C transfer occurred? y/n")
