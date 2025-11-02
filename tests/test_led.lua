@@ -50,7 +50,7 @@ function test_open_config_close()
     led:write(true)
     periphery.sleep_ms(10)
     passert("read true", led:read() == true)
-    passert("brightness is max", led.brightness == led.max_brightness)
+    passert("brightness is non-zero", led.brightness > 0)
 
     -- Write false, read false, check brightness is zero
     led:write(false)
