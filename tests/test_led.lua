@@ -159,10 +159,10 @@ if #arg < 1 then
     io.stderr:write("[2/4] Open/close test: LED should be real.\n")
     io.stderr:write("[3/4] Loopback test: No test.\n")
     io.stderr:write("[4/4] Interactive test: LED should be observed.\n\n")
-    io.stderr:write("Hint: for Raspberry Pi 3, disable triggers for led1:\n")
-    io.stderr:write("    $ echo none > /sys/class/leds/led1/trigger\n")
-    io.stderr:write("Observe led1 (red power LED), and run this test:\n")
-    io.stderr:write(string.format("    lua %s led1\n\n", arg[0]))
+    io.stderr:write("Hint: for Raspberry Pi 3, disable triggers for PWR:\n")
+    io.stderr:write("    $ echo none > /sys/class/leds/PWR/trigger\n")
+    io.stderr:write("Observe PWR (red power LED), and run this test:\n")
+    io.stderr:write(string.format("    lua %s PWR\n\n", arg[0]))
     os.exit(1)
 end
 

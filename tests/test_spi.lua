@@ -226,7 +226,7 @@ if #arg < 1 then
     io.stderr:write("[3/4] Loopback test: SPI MISO and MOSI should be connected with a wire.\n")
     io.stderr:write("[4/4] Interactive test: SPI MOSI, CLK, CS should be observed with an oscilloscope or logic analyzer.\n\n")
     io.stderr:write("Hint: for Raspberry Pi 3, enable SPI0 with:\n")
-    io.stderr:write("   $ echo \"dtparam=spi=on\" | sudo tee -a /boot/config.txt\n")
+    io.stderr:write("   $ echo \"dtparam=spi=on\" | sudo tee -a /boot/firmware/config.txt\n")
     io.stderr:write("   $ sudo reboot\n")
     io.stderr:write("Use pins SPI0 MOSI (header pin 19), SPI0 MISO (header pin 21), SPI0 SCLK (header pin 23),\n")
     io.stderr:write("connect a loopback between MOSI and MISO, and run this test with:\n")

@@ -198,7 +198,7 @@ if #arg < 1 then
     io.stderr:write("[3/4] Loopback test: Serial TX and RX should be connected with a wire.\n")
     io.stderr:write("[4/4] Interactive test: Serial TX should be observed with an oscilloscope or logic analyzer.\n\n")
     io.stderr:write("Hint: for Raspberry Pi 3, enable UART0 with:\n")
-    io.stderr:write("   $ echo \"dtoverlay=pi3-disable-bt\" | sudo tee -a /boot/config.txt\n")
+    io.stderr:write("   $ echo \"dtoverlay=pi3-disable-bt\" | sudo tee -a /boot/firmware/config.txt\n")
     io.stderr:write("   $ sudo systemctl disable hciuart\n")
     io.stderr:write("   $ sudo reboot\n")
     io.stderr:write("   (Note that this will disable Bluetooth)\n")

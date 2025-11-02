@@ -199,7 +199,7 @@ if #arg < 2 then
     io.stderr:write("[3/4] Loopback test: No test.\n")
     io.stderr:write("[4/4] Interactive test: PWM channel should be observed with an oscilloscope or logic analyzer.\n\n")
     io.stderr:write("Hint: for Raspberry Pi 3, enable PWM0 and PWM1 with:\n")
-    io.stderr:write("   $ echo \"dtoverlay=pwm-2chan,pin=18,func=2,pin2=13,func2=4\" | sudo tee -a /boot/config.txt\n")
+    io.stderr:write("   $ echo \"dtoverlay=pwm-2chan,pin=18,func=2,pin2=13,func2=4\" | sudo tee -a /boot/firmware/config.txt\n")
     io.stderr:write("   $ sudo reboot\n")
     io.stderr:write("Monitor GPIO 18 (header pin 12), and run this test with:\n")
     io.stderr:write(string.format("    lua %s 0 0\n", arg[0]))

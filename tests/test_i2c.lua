@@ -143,7 +143,7 @@ if #arg < 1 then
     io.stderr:write("[3/4] Loopback test: Expects 24XX32 EEPROM (or similar) at address 0x51.\n")
     io.stderr:write("[4/4] Interactive test: I2C bus should be observed with an oscilloscope or logic analyzer.\n\n")
     io.stderr:write("Hint: for Raspberry Pi 3, enable I2C1 with:\n")
-    io.stderr:write("   $ echo \"dtparam=i2c_arm=on\" | sudo tee -a /boot/config.txt\n")
+    io.stderr:write("   $ echo \"dtparam=i2c_arm=on\" | sudo tee -a /boot/firmware/config.txt\n")
     io.stderr:write("   $ sudo reboot\n")
     io.stderr:write("Use pins I2C1 SDA (header pin 2) and I2C1 SCL (header pin 3),\n")
     io.stderr:write("and run this test with:\n")
